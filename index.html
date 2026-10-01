@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreightFlow SaaS - DFW Operations Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Import Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white font-black px-3 py-1.5 rounded-lg text-lg tracking-wider">FF</div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">FreightFlow <span class="text-blue-500 text-xs uppercase px-2 py-0.5 bg-blue-950 rounded-full border border-blue-800">DFW Hub Edition</span></h1>
+                <p class="text-xs text-slate-400">Automated Load Board & Driver Funnel Engine</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
+                <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Supabase DB Connected
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="p-6 max-w-7xl mx-auto space-y-6">
+
+        <!-- Top Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-slate-400 uppercase">Active DFW Loads</p>
+                <h3 id="stat-loads" class="text-2xl font-black mt-1 text-white">0</h3>
+                <p class="text-xs text-emerald-400 mt-1">Live from database feed</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-slate-400 uppercase">Qualified Driver Leads</p>
+                <h3 id="stat-drivers" class="text-2xl font-black mt-1 text-white">0</h3>
+                <p class="text-xs text-emerald-400 mt-1">Cost Per Lead: $14.20 (Meta/TikTok)</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-slate-400 uppercase">Avg Matched RPM</p>
+                <h3 class="text-2xl font-black mt-1 text-blue-400">$2.68</h3>
+                <p class="text-xs text-slate-400 mt-1">Target threshold: $2.40+</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-slate-400 uppercase">Auto-Dispatched Today</p>
+                <h3 class="text-2xl font-black mt-1 text-emerald-400">42</h3>
+                <p class="text-xs text-slate-400 mt-1">SMS Opt-in Rate: 91%</p>
+            </div>
+        </div>
+
+        <!-- Middle Section: Smart Match Board (Split View) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Left: Live Freight Feed (Load Data from Supabase) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col h-[500px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>📦</span> Live DFW Freight Board
+                    </h2>
+                    <span class="text-xs text-slate-400">Synced Database View</span>
+                </div>
+                <div id="loads-container" class="space-y-3 overflow-y-auto pr-2 flex-1">
+                    <p class="text-xs text-slate-500 text-center py-10">Loading freight board data...</p>
+                </div>
+            </div>
+
+            <!-- Right: Pre-Screened Driver Database (From Supabase) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col h-[500px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>👤</span> Funneled Driver Pool
+                    </h2>
+                    <span class="text-xs text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-900">Ready to Book</span>
+                </div>
+                <div id="drivers-container" class="space-y-3 overflow-y-auto pr-2 flex-1">
+                    <p class="text-xs text-slate-500 text-center py-10">Loading funneled drivers...</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Section: Funnel Analytics & Performance -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 lg:col-span-2">
+                <h3 class="text-base font-bold text-white mb-2">Driver Lead Gen Funnel Performance (Meta & TikTok Ads)</h3>
+                <p class="text-xs text-slate-400 mb-4">Tracking prospective driver engagement from ad impression to instant qualification bot.</p>
+                <div class="h-48 flex items-center justify-center">
+                    <canvas id="funnelChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-white mb-2">Automated SMS Dispatches</h3>
+                    <p class="text-xs text-slate-400 mb-4">Simulate the push notifications sent straight to matched drivers.</p>
+                    <div id="simulated-log" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono h-28 overflow-y-auto">
+                        [System] Ready for dispatch matching...<br>
+                        [DFW-Hub] Live database connection active.
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button onclick="clearLog()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-xs font-medium transition">
+                        Reset Dispatch Log
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Supabase Logic & Dashboard Controller -->
+    <script>
+        // Configured automatically using your Supabase project reference
+        const SUPABASE_URL = 'https://tzauiliihoxwdnxuobku.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6YXVpbGlpaG94d2RueHVvYmt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4MDMwMjMsImV4cCI6MjEwNjM3OTAyM30.xSYUmWfIWohexSwwm1UYNYG7g2Emt-pRAG0DqlgPOVI';
+
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Fetch Loads from Supabase Database
+        async function fetchLoads() {
+            const container = document.getElementById('loads-container');
+            const { data, error } = await _supabase.from('loads').select('*').eq('booked', false);
+
+            if (error) {
+                container.innerHTML = `<p class="text-xs text-red-400 text-center py-6">Error loading data: ${error.message}</p>`;
+                return;
+            }
+
+            document.getElementById('stat-loads').innerText = data.length;
+
+            if (data.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No active unbooked loads found. Insert rows via Supabase SQL editor to test!</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map(load => `
+                <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-lg hover:border-blue-500 transition cursor-pointer">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-bold text-blue-400 bg-blue-950 px-2 py-0.5 rounded border border-blue-900">${load.load_reference}</span>
+                            <h4 class="font-bold text-sm mt-1">${load.origin} ➔ ${load.destination}</h4>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-black text-emerald-400">$${load.rate_flat} Flat</span>
+                            <p class="text-xs text-slate-400">$${load.rpm} / Mile</p>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-900">
+                        <span>Equipment: ${load.equipment_type || "53' Dry Van"}</span>
+                        <span class="text-blue-400 font-medium">Ready for Match</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Fetch Drivers from Supabase Database
+        async function fetchDrivers() {
+            const container = document.getElementById('drivers-container');
+            const { data, error } = await _supabase.from('drivers').select('*');
+
+            if (error) {
+                container.innerHTML = `<p class="text-xs text-red-400 text-center py-6">Error loading drivers: ${error.message}</p>`;
+                return;
+            }
+
+            document.getElementById('stat-drivers').innerText = data.length;
+
+            if (data.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">No driver leads found. Insert rows via Supabase SQL editor to test!</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map(driver => `
+                <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h4 class="font-bold text-sm">${driver.full_name}</h4>
+                                <span class="text-xs bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded">CDL-A (${driver.cdl_experience || 2} yrs)</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">Prefers: ${driver.preferred_lane || 'DFW Regional Loops'}</p>
+                        </div>
+                        <span class="text-xs font-bold text-blue-400 bg-blue-950/50 px-2 py-1 rounded border border-blue-900">Min: $${driver.min_rpm}/mi</span>
+                    </div>
+                    <div class="mt-3 flex justify-between items-center pt-2 border-t border-slate-900">
+                        <span class="text-xs text-emerald-400">● SMS Funnel Active</span>
+                        <button onclick="triggerOffer('${driver.full_name}', '${driver.phone}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs font-bold transition">
+                            Match & Offer ⚡
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Funnel Chart
+        const ctx = document.getElementById('funnelChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Ad Impressions', 'Ad Clicks', 'SMS Bot Opt-In', 'Fully Qualified', 'Dispatched'],
+                datasets: [{
+                    label: 'Driver Pipeline Volume',
+                    data: [14200, 3100, 1250, 384, 42],
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // Trigger Interactive SMS Offer simulation
+        function triggerOffer(driverName, phone) {
+            const logBox = document.getElementById('simulated-log');
+            const time = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br><span class="text-emerald-400">[${time}] Offer Dispatched!</span> ➔ SMS sent to ${driverName} (${phone}) with load profile.`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function clearLog() {
+            const logBox = document.getElementById('simulated-log');
+            logBox.innerHTML = `[System] Log cleared. Standing by for dispatch inputs...`;
+        }
+
+        // Initialize Data Feeds on Page Load
+        window.onload = () => {
+            fetchLoads();
+            fetchDrivers();
+        };
+    </script>
+</body>
+</html>
